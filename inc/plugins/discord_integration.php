@@ -13,8 +13,8 @@ if (!defined('IN_MYBB')) {
 	die('Direct initialization of this file is not allowed.');
 }
 
-$plugins->add_hook('datahandler_post_insert_thread', 'discord_integration_new_thread');
-$plugins->add_hook('datahandler_post_insert_post', 'discord_integration_new_reply');
+$plugins->add_hook('datahandler_post_insert_thread_end', 'discord_integration_new_thread');
+$plugins->add_hook('datahandler_post_insert_post_end', 'discord_integration_new_reply');
 
 function discord_integration_info() {
 	global $lang;
@@ -24,11 +24,10 @@ function discord_integration_info() {
 	return array(
 		'name'			=> $lang->discord_integration_name,
 		'description'	=> $lang->discord_integration_desc,
-		'website'		=> '',
 		'author'		=> 'Shinka',
 		'authorsite'	=> 'https://github.com/kalynrobinson/discord_integration',
 		'website' 		=> 'https://github.com/kalynrobinson/discord_integration',
-		'version'		=> '2.1.0',
+		'version'		=> '2.1.1',
 		'guid' 			=> '',
 		'codename'		=> 'discord_integration',
 		'compatibility' => '18'
@@ -36,7 +35,7 @@ function discord_integration_info() {
 }
 
 function discord_integration_install() {
-    global $db, $mybb, $lang;
+    global $db,     $lang;
 
 	$lang->load('discord_integration');
 
@@ -55,31 +54,35 @@ function discord_integration_install() {
             'title' => $lang->discord_integration_new_thread_webhook_title,
             'description' => $lang->discord_integration_new_thread_webhook_desc,
             'optionscode' => 'text',
+            'value' => '',
             'disporder' => 1
         ),
         'discord_integration_new_thread_forums' => array(
             'title' => $lang->discord_integration_new_thread_forums_title,
             'description' => $lang->discord_integration_new_thread_forums_desc,
             'optionscode' => 'forumselect',
+            'value' => '',
             'disporder' => 2
         ),
         'discord_integration_new_thread_groups' => array(
             'title' => $lang->discord_integration_new_thread_groups_title,
             'description' => $lang->discord_integration_new_thread_groups_desc,
             'optionscode' => 'groupselect',
+            'value' => '',
             'disporder' => 3
         ),
         'discord_integration_new_thread_users' => array(
             'title' => $lang->discord_integration_new_thread_users_title,
             'description' => $lang->discord_integration_new_thread_users_desc,
             'optionscode' => 'text',
+            'value' => '',
             'disporder' => 4
         ),
         'discord_integration_new_thread_default_nickname' => array(
             'title' => $lang->discord_integration_new_thread_default_nickname_title,
             'description' => $lang->discord_integration_new_thread_default_nickname_desc,
             'optionscode' => 'yesno',
-        		'value' => 0,
+            'value' => 0,
             'disporder' => 5
         ),
         'discord_integration_new_thread_nickname' => array(
@@ -100,31 +103,35 @@ function discord_integration_install() {
             'title' => $lang->discord_integration_new_reply_webhook_title,
             'description' => $lang->discord_integration_new_reply_webhook_desc,
             'optionscode' => 'text',
+            'value' => '',
             'disporder' => 8
         ),
         'discord_integration_new_reply_forums' => array(
             'title' => $lang->discord_integration_new_reply_forums_title,
             'description' => $lang->discord_integration_new_reply_forums_desc,
             'optionscode' => 'forumselect',
+            'value' => '',
             'disporder' => 9
         ),
         'discord_integration_new_reply_groups' => array(
             'title' => $lang->discord_integration_new_reply_groups_title,
             'description' => $lang->discord_integration_new_reply_groups_desc,
             'optionscode' => 'groupselect',
+            'value' => '',
             'disporder' => 10
         ),
         'discord_integration_new_reply_users' => array(
             'title' => $lang->discord_integration_new_reply_users_title,
             'description' => $lang->discord_integration_new_reply_users_desc,
             'optionscode' => 'text',
+            'value' => '',
             'disporder' => 11
         ),
         'discord_integration_new_reply_default_nickname' => array(
             'title' => $lang->discord_integration_new_reply_default_nickname_title,
             'description' => $lang->discord_integration_new_reply_default_nickname_desc,
             'optionscode' => 'yesno',
-        		'value' => 0,
+            'value' => 0,
             'disporder' => 12
         ),
         'discord_integration_new_reply_nickname' => array(
@@ -181,41 +188,45 @@ function discord_integration_activate() {
 function discord_integration_deactivate() {
 }
 
-function discord_integration_new_thread() {
-	global $mybb;
+function discord_integration_new_thread($handler) {
+    global $tid, $pid;
 
-	send_general('new_thread');
-	send_specific('new_thread');
+    $tid = $handler->tid;
+    $pid = $handler->pid;
+
+	discord_integration_send_general('new_thread');
+	discord_integration_send_specific('new_thread');
 }
 
-function discord_integration_new_reply() {
-	global $mybb;
+function discord_integration_new_reply($handler) {
+    global $tid, $pid;
 
-	send_general('new_reply');
-	send_specific('new_reply');
+    $tid = $handler->tid;
+    $pid = $handler->pid;
+
+    discord_integration_send_general('new_reply');
+	discord_integration_send_specific('new_reply');
 }
 
-function send_specific($behavior) {
-	global $mybb;
-
-	$specifics = has_specific($behavior);
+function discord_integration_send_specific($behavior) {
+	$specifics = discord_integration_has_specific($behavior);
 	if (!$specifics) return;
 
 	foreach ($specifics as $specific) {
-		send_request($behavior, $specific['webhook'], $specific['nickname'], $specific['message']);
+		discord_integration_send_request($behavior, $specific['webhook'], $specific['nickname'], $specific['message']);
 	}
 }
 
-function send_general($behavior) {
+function discord_integration_send_general($behavior) {
 	global $mybb;
 
 	$webhook = $mybb->settings['discord_integration_'.$behavior.'_webhook'];
-	if (!$webhook || !has_permission($behavior)) return;
+	if (!$webhook || !discord_integration_has_permission($behavior)) return;
 
-	send_request($behavior, $webhook);
+	discord_integration_send_request($behavior, $webhook);
 }
 
-function explode_alternatives() {
+function discord_integration_explode_alternatives() {
 	global $mybb;
 
 	// Trim first '-' from settings
@@ -238,19 +249,17 @@ function explode_alternatives() {
 	return $settings;
 }
 
-function has_specific($behavior) {
-	global $mybb;
-
-	$alternatives = explode_alternatives();
+function discord_integration_has_specific($behavior) {
+	$alternatives = discord_integration_explode_alternatives();
 	$to_fulfill = array();
 	foreach ($alternatives as $alt) {
-		 if (has_specific_permission($alt, $behavior)) array_push($to_fulfill, $alt);
+		 if (discord_integration_has_specific_permission($alt, $behavior)) array_push($to_fulfill, $alt);
 	}
 
 	return $to_fulfill;
 }
 
-function has_specific_permission($specific, $behavior) {
+function discord_integration_has_specific_permission($specific, $behavior) {
 	global $mybb, $thread;
 
 	$allowed = true;
@@ -284,7 +293,7 @@ function has_specific_permission($specific, $behavior) {
 	return $allowed;
 }
 
-function has_permission($behavior) {
+function discord_integration_has_permission($behavior) {
 	global $mybb, $fid;
 
 	$allowed = true;
@@ -313,7 +322,7 @@ function has_permission($behavior) {
 	return $allowed;
 }
 
-function build_request($behavior, $nickname=NULL, $content=NULL) {
+function discord_integration_build_request($behavior, $nickname=NULL, $content=NULL) {
 	global $cache, $tid, $pid, $mybb, $forum;
 
 	$SHORT_POST_LENGTH = 200;
@@ -343,6 +352,8 @@ function build_request($behavior, $nickname=NULL, $content=NULL) {
 	else
 		$messageshort = $mybb->input['message'];
 
+    $request = new stdClass();
+
 	if ($nickname) {
 		try {
 			eval('$request->username = "' . $nickname . '";');
@@ -369,8 +380,8 @@ function build_request($behavior, $nickname=NULL, $content=NULL) {
 	return $request;
 }
 
-function send_request($behavior, $webhook, $nickname = NULL, $message = NULL) {
-	$request = build_request($behavior, $nickname, $message);
+function discord_integration_send_request($behavior, $webhook, $nickname = NULL, $message = NULL) {
+	$request = discord_integration_build_request($behavior, $nickname, $message);
 
 	$curl = curl_init();
 

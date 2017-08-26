@@ -353,6 +353,8 @@ function discord_integration_build_request($behavior, $nickname=NULL, $content=N
 	else
 		$messageshort = $mybb->input['message'];
 
+    $messageshort = preg_replace('/@(everyone|here)/', '__@__$1', $messageshort);
+
     $request = new stdClass();
 
 	if ($nickname) {

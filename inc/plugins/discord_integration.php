@@ -201,8 +201,8 @@ function discord_integration_new_thread($handler) {
 function discord_integration_new_reply($handler) {
     global $tid, $pid;
 
-    $tid = $handler->tid;
-    $pid = $handler->pid;
+    $tid = $handler->return_values['pid'];
+    $pid = $handler->data['tid'];
 
     discord_integration_send_general('new_reply');
 	discord_integration_send_specific('new_reply');

@@ -191,21 +191,22 @@ function discord_integration_deactivate() {
 function discord_integration_new_thread($handler) {
     global $tid, $pid;
 
-    $tid = $handler->tid;
-    $pid = $handler->pid;
+    if (!$tid) $tid = $handler->tid;
+    if (!$pid) $pid = $handler->pid;
 
 	discord_integration_send_general('new_thread');
 	discord_integration_send_specific('new_thread');
 }
 
-function discord_integration_new_reply($handler) {
+function discord_integration_new_reply($handler)
+{
     global $tid, $pid;
 
-    $tid = $handler->return_values['pid'];
-    $pid = $handler->data['tid'];
+    if (!$tid) $pid = $handler->return_values['pid'];
+    if (!$pid) $tid = $handler->data['tid'];
 
     discord_integration_send_general('new_reply');
-	discord_integration_send_specific('new_reply');
+    discord_integration_send_specific('new_reply');
 }
 
 function discord_integration_send_specific($behavior) {

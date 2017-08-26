@@ -202,8 +202,8 @@ function discord_integration_new_reply($handler)
 {
     global $tid, $pid;
 
-    if (!$tid) $pid = $handler->return_values['pid'];
-    if (!$pid) $tid = $handler->data['tid'];
+    if (!$pid) $pid = $handler->return_values['pid'];
+    if (!$tid) $tid = $handler->data['tid'];
 
     discord_integration_send_general('new_reply');
     discord_integration_send_specific('new_reply');

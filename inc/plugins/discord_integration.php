@@ -10,34 +10,36 @@
 
 // Disallow direct access to this file for security reasons
 if (!defined('IN_MYBB')) {
-	die('Direct initialization of this file is not allowed.');
+    die('Direct initialization of this file is not allowed.');
 }
 
 $plugins->add_hook('datahandler_post_insert_thread_end', 'discord_integration_new_thread');
 $plugins->add_hook('datahandler_post_insert_post_end', 'discord_integration_new_reply');
 
-function discord_integration_info() {
-	global $lang;
+function discord_integration_info()
+{
+    global $lang;
 
-	$lang->load('discord_integration');
+    $lang->load('discord_integration');
 
-	return array(
-		'name'			=> $lang->discord_integration_name,
-		'description'	=> $lang->discord_integration_desc,
-		'author'		=> 'Shinka',
-		'authorsite'	=> 'https://github.com/kalynrobinson/discord_integration',
-		'website' 		=> 'https://github.com/kalynrobinson/discord_integration',
-		'version'		=> '2.1.1',
-		'guid' 			=> '',
-		'codename'		=> 'discord_integration',
-		'compatibility' => '18'
-	);
+    return array(
+        'name' => $lang->discord_integration_name,
+        'description' => $lang->discord_integration_desc,
+        'author' => 'Shinka',
+        'authorsite' => 'https://github.com/kalynrobinson/discord_integration',
+        'website' => 'https://github.com/kalynrobinson/discord_integration',
+        'version' => '2.1.1',
+        'guid' => '',
+        'codename' => 'discord_integration',
+        'compatibility' => '18'
+    );
 }
 
-function discord_integration_install() {
+function discord_integration_install()
+{
     global $db, $lang;
 
-	$lang->load('discord_integration');
+    $lang->load('discord_integration');
 
     $setting_group = array(
         'name' => 'discord_integration',
@@ -152,12 +154,12 @@ function discord_integration_install() {
             'title' => $lang->discord_integration_additional_title,
             'description' => $lang->discord_integration_additional_desc,
             'optionscode' => 'textarea',
-			'value' => $lang->discord_integration_additional_value,
+            'value' => $lang->discord_integration_additional_value,
             'disporder' => 15
         )
     );
 
-    foreach($setting_array as $name => $setting) {
+    foreach ($setting_array as $name => $setting) {
         $setting['name'] = $name;
         $setting['gid'] = $gid;
 
@@ -167,35 +169,40 @@ function discord_integration_install() {
     rebuild_settings();
 }
 
-function discord_integration_is_installed() {
+function discord_integration_is_installed()
+{
     global $settings;
 
     return isset($settings['discord_integration_new_thread_webhook']);
 }
 
-function discord_integration_uninstall() {
+function discord_integration_uninstall()
+{
     global $db;
 
-	$db->delete_query('settings', "name LIKE 'discord_integration_%'");
+    $db->delete_query('settings', "name LIKE 'discord_integration_%'");
     $db->delete_query('settinggroups', "name = 'discord_integration'");
 
     rebuild_settings();
 }
 
-function discord_integration_activate() {
+function discord_integration_activate()
+{
 }
 
-function discord_integration_deactivate() {
+function discord_integration_deactivate()
+{
 }
 
-function discord_integration_new_thread($handler) {
+function discord_integration_new_thread($handler)
+{
     global $tid, $pid;
 
     if (!$tid) $tid = $handler->tid;
     if (!$pid) $pid = $handler->pid;
 
-	discord_integration_send_general('new_thread');
-	discord_integration_send_specific('new_thread');
+    discord_integration_send_general('new_thread');
+    discord_integration_send_specific('new_thread');
 }
 
 function discord_integration_new_reply($handler)
@@ -209,144 +216,151 @@ function discord_integration_new_reply($handler)
     discord_integration_send_specific('new_reply');
 }
 
-function discord_integration_send_specific($behavior) {
-	$specifics = discord_integration_has_specific($behavior);
-	if (!$specifics) return;
+function discord_integration_send_specific($behavior)
+{
+    $specifics = discord_integration_has_specific($behavior);
+    if (!$specifics) return;
 
-	foreach ($specifics as $specific) {
-		discord_integration_send_request($behavior, $specific['webhook'], $specific['nickname'], $specific['message']);
-	}
+    foreach ($specifics as $specific) {
+        discord_integration_send_request($behavior, $specific['webhook'], $specific['nickname'], $specific['message']);
+    }
 }
 
-function discord_integration_send_general($behavior) {
-	global $mybb;
+function discord_integration_send_general($behavior)
+{
+    global $mybb;
 
-	$webhook = $mybb->settings['discord_integration_'.$behavior.'_webhook'];
-	if (!$webhook || !discord_integration_has_permission($behavior)) return;
+    $webhook = $mybb->settings['discord_integration_' . $behavior . '_webhook'];
+    if (!$webhook || !discord_integration_has_permission($behavior)) return;
 
-	discord_integration_send_request($behavior, $webhook);
+    discord_integration_send_request($behavior, $webhook);
 }
 
-function discord_integration_explode_alternatives() {
-	global $mybb;
+function discord_integration_explode_alternatives()
+{
+    global $mybb;
 
-	// Trim first '-' from settings
-	$settings = substr($mybb->settings['discord_integration_additional'], 1);
+    // Trim first '-' from settings
+    $settings = substr($mybb->settings['discord_integration_additional'], 1);
 
-	// For some reason, \n--\n doesn't work as a delimiter, so just trim extra whitespace.
-	$exploded_settings = explode("\n---", $settings);
-	$settings = array();
+    // For some reason, \n--\n doesn't work as a delimiter, so just trim extra whitespace.
+    $exploded_settings = explode("\n---", $settings);
+    $settings = array();
 
-	foreach ($exploded_settings as $key => $value) {
-	    $explosion = explode("\n-", $value);
-	    $inner = array();
-	    foreach($explosion as $ekey => $evalue) {
-	        $inner_explosion = explode('=', $evalue);
-	        $inner[strtolower(trim($inner_explosion[0]))] = trim($inner_explosion[1]);
-	    }
-	    array_push($settings, $inner);
-	}
+    foreach ($exploded_settings as $key => $value) {
+        $explosion = explode("\n-", $value);
+        $inner = array();
+        foreach ($explosion as $ekey => $evalue) {
+            $inner_explosion = explode('=', $evalue);
+            $inner[strtolower(trim($inner_explosion[0]))] = trim($inner_explosion[1]);
+        }
+        array_push($settings, $inner);
+    }
 
-	return $settings;
+    return $settings;
 }
 
-function discord_integration_has_specific($behavior) {
-	$alternatives = discord_integration_explode_alternatives();
-	$to_fulfill = array();
-	foreach ($alternatives as $alt) {
-		 if (discord_integration_has_specific_permission($alt, $behavior)) array_push($to_fulfill, $alt);
-	}
+function discord_integration_has_specific($behavior)
+{
+    $alternatives = discord_integration_explode_alternatives();
+    $to_fulfill = array();
+    foreach ($alternatives as $alt) {
+        if (discord_integration_has_specific_permission($alt, $behavior)) array_push($to_fulfill, $alt);
+    }
 
-	return $to_fulfill;
+    return $to_fulfill;
 }
 
-function discord_integration_has_specific_permission($specific, $behavior) {
-	global $mybb, $thread;
+function discord_integration_has_specific_permission($specific, $behavior)
+{
+    global $mybb, $thread;
 
-	$allowed = true;
+    $allowed = true;
 
-	if ($specific['behavior'] != $behavior) return false;
+    if ($specific['behavior'] != $behavior) return false;
 
-	if ($specific['forums']) {
-		$allowed_forums = explode(',', $specific['forums']);
-		$forum = $mybb->input['fid'];
-		$allowed = in_array((string) $forum, $allowed_forums);
-	}
+    if ($specific['forums']) {
+        $allowed_forums = explode(',', $specific['forums']);
+        $forum = $mybb->input['fid'];
+        $allowed = in_array((string)$forum, $allowed_forums);
+    }
 
-	if ($specific['groups'] && $allowed) {
-		$allowed_groups = explode(',', $specific['groups']);
-		$user_groups = explode(',', $mybb->user['usergroup']);
-		$allowed = count(array_intersect($user_groups, $allowed_groups)) > 0;
-	}
+    if ($specific['groups'] && $allowed) {
+        $allowed_groups = explode(',', $specific['groups']);
+        $user_groups = explode(',', $mybb->user['usergroup']);
+        $allowed = count(array_intersect($user_groups, $allowed_groups)) > 0;
+    }
 
-	if ($specific['prefixes'] && $allowed) {
-		$allowed_prefixes = explode(',', $specific['prefixes']);
-		$prefix = $thread['prefix'];
-		$allowed = in_array((string) $prefix, $allowed_prefixes);
-	}
+    if ($specific['prefixes'] && $allowed) {
+        $allowed_prefixes = explode(',', $specific['prefixes']);
+        $prefix = $thread['prefix'];
+        $allowed = in_array((string)$prefix, $allowed_prefixes);
+    }
 
-	if ($specific['users'] && $allowed) {
-		$allowed_users = explode(',', $specific['users']);
-		$user = $mybb->user['uid'];
-		$allowed = in_array((string) $user, $allowed_users);
-	}
+    if ($specific['users'] && $allowed) {
+        $allowed_users = explode(',', $specific['users']);
+        $user = $mybb->user['uid'];
+        $allowed = in_array((string)$user, $allowed_users);
+    }
 
-	return $allowed;
+    return $allowed;
 }
 
-function discord_integration_has_permission($behavior) {
-	global $mybb, $fid;
+function discord_integration_has_permission($behavior)
+{
+    global $mybb, $fid;
 
-	$allowed = true;
+    $allowed = true;
 
-	// Not all groups are allowed
-	if ($mybb->settings['discord_integration_'.$behavior.'_groups'] != -1) {
-		$user_groups = explode(',', $mybb->user['usergroup']);
-		$allowed_groups = explode(',', $mybb->settings['discord_integration_'.$behavior.'_groups']);
-		$allowed = count(array_intersect($user_groups, $allowed_groups)) > 0;
-	}
+    // Not all groups are allowed
+    if ($mybb->settings['discord_integration_' . $behavior . '_groups'] != -1) {
+        $user_groups = explode(',', $mybb->user['usergroup']);
+        $allowed_groups = explode(',', $mybb->settings['discord_integration_' . $behavior . '_groups']);
+        $allowed = count(array_intersect($user_groups, $allowed_groups)) > 0;
+    }
 
-	// Not all forums are allowed
-	if ($mybb->settings['discord_integration_'.$behavior.'_forums'] != -1) {
-		$allowed_forums = explode(',', $mybb->settings['discord_integration_'.$behavior.'_forums']);
-		$forum = $fid;
-		$allowed = in_array($forum, $allowed_forums);
-	}
+    // Not all forums are allowed
+    if ($mybb->settings['discord_integration_' . $behavior . '_forums'] != -1) {
+        $allowed_forums = explode(',', $mybb->settings['discord_integration_' . $behavior . '_forums']);
+        $forum = $fid;
+        $allowed = in_array($forum, $allowed_forums);
+    }
 
-	// Not all users are allowed
-	if ($mybb->settings['discord_integration_'.$behavior.'_users']) {
-		$allowed_users = explode(',', $mybb->settings['discord_integration_'.$behavior.'_users']);
-		$user = $mybb->user['uid'];
-		$allowed = in_array($user, $allowed_users);
-	}
+    // Not all users are allowed
+    if ($mybb->settings['discord_integration_' . $behavior . '_users']) {
+        $allowed_users = explode(',', $mybb->settings['discord_integration_' . $behavior . '_users']);
+        $user = $mybb->user['uid'];
+        $allowed = in_array($user, $allowed_users);
+    }
 
-	return $allowed;
+    return $allowed;
 }
 
-function discord_integration_build_request($behavior, $nickname=NULL, $content=NULL) {
-	global $cache, $tid, $pid, $mybb, $forum;
+function discord_integration_build_request($behavior, $nickname = NULL, $content = NULL)
+{
+    global $cache, $tid, $pid, $mybb, $forum;
 
-	$SHORT_POST_LENGTH = 200;
+    $SHORT_POST_LENGTH = 200;
 
-	if (!$content) $content = $mybb->settings['discord_integration_'.$behavior.'_message'];
+    if (!$content) $content = $mybb->settings['discord_integration_' . $behavior . '_message'];
 
-	$prefix = $cache->read("threadprefixes")[$mybb->input['threadprefix']]['prefix'];
-	
-	$userurl = "{$mybb->settings['bburl']}/member.php?action=profile&uid={$mybb->user['uid']}";
-	$threadurl = "{$mybb->settings['bburl']}/showthread.php?tid={$tid}&pid={$pid}#pid{$pid}";
-	$forumurl = "{$mybb->settings['bburl']}/forumdisplay.php?fid={$forum['fid']}";
-	
-	if ($mybb->user['username']) $username = $mybb->user['username'];
-	else if ($mybb->input['username']) $username = $mybb->input['username'];
-	else $username = 'A Guest';
+    $prefix = $cache->read("threadprefixes")[$mybb->input['threadprefix']]['prefix'];
 
-	if ($mybb->user['uid'])
-		$userlink = "[{$mybb->user['username']}]($userurl)";
-	else
-		$userlink = $username;
-	
-	$threadlink = "[{$mybb->input['subject']}]($threadurl)";	
-	$forumlink = "[{$forum['name']}]($forumurl)";
+    $userurl = "{$mybb->settings['bburl']}/member.php?action=profile&uid={$mybb->user['uid']}";
+    $threadurl = "{$mybb->settings['bburl']}/showthread.php?tid={$tid}&pid={$pid}#pid{$pid}";
+    $forumurl = "{$mybb->settings['bburl']}/forumdisplay.php?fid={$forum['fid']}";
+
+    if ($mybb->user['username']) $username = $mybb->user['username'];
+    else if ($mybb->input['username']) $username = $mybb->input['username'];
+    else $username = 'A Guest';
+
+    if ($mybb->user['uid'])
+        $userlink = "[{$mybb->user['username']}]($userurl)";
+    else
+        $userlink = $username;
+
+    $threadlink = "[{$mybb->input['subject']}]($threadurl)";
+    $forumlink = "[{$forum['name']}]($forumurl)";
 
     // Remove quote
     $messageshort = preg_replace('/\[quote.*?\](.*?)\[\/quote\]/ism', '', $mybb->input['message']);
@@ -354,7 +368,7 @@ function discord_integration_build_request($behavior, $nickname=NULL, $content=N
     // Truncate
     $messageshort = StringCutter::truncate($messageshort, $SHORT_POST_LENGTH, '...', array('word' => true, 'bbcode' => true));
 
-	// Escape everyone and here
+    // Escape everyone and here
     $messageshort = preg_replace('/@(everyone|here)/', '__@__$1', $messageshort);
 
     // Styling
@@ -371,57 +385,58 @@ function discord_integration_build_request($behavior, $nickname=NULL, $content=N
 
     $request = new stdClass();
 
-	if ($nickname) {
-		try {
-			eval('$request->username = "' . $nickname . '";');
-		} catch(Exception $e) {
-			$request->username = $nickname;
-		}
-	} else if (!$mybb->settings['discord_integration_'.$behavior.'_default_nickname']) {
-		if ($mybb->settings['discord_integration_'.$behavior.'_nickname'])
-			$request->username = $mybb->settings['discord_integration_'.$behavior.'_nickname'];
-		else {
-			$request->username = $mybb->user['username'];
-			$request->avatar_url = $mybb->settings['bburl'] . $mybb->user['avatar'];
-		}
-	}
+    if ($nickname) {
+        try {
+            eval('$request->username = "' . $nickname . '";');
+        } catch (Exception $e) {
+            $request->username = $nickname;
+        }
+    } else if (!$mybb->settings['discord_integration_' . $behavior . '_default_nickname']) {
+        if ($mybb->settings['discord_integration_' . $behavior . '_nickname'])
+            $request->username = $mybb->settings['discord_integration_' . $behavior . '_nickname'];
+        else {
+            $request->username = $mybb->user['username'];
+            $request->avatar_url = $mybb->settings['bburl'] . $mybb->user['avatar'];
+        }
+    }
 
-	try {
-		eval('$content = "' . $content . '";');
-	} catch (Exception $e) {
-		$content = "Sorry, there's something wrong with your message variables!";
-	}
+    try {
+        eval('$content = "' . $content . '";');
+    } catch (Exception $e) {
+        $content = "Sorry, there's something wrong with your message variables!";
+    }
 
-	$request->content = $content;
+    $request->content = $content;
 
-	return $request;
+    return $request;
 }
 
-function discord_integration_send_request($behavior, $webhook, $nickname = NULL, $message = NULL) {
-	$request = discord_integration_build_request($behavior, $nickname, $message);
+function discord_integration_send_request($behavior, $webhook, $nickname = NULL, $message = NULL)
+{
+    $request = discord_integration_build_request($behavior, $nickname, $message);
 
-	$curl = curl_init();
+    $curl = curl_init();
 
-	curl_setopt_array($curl, array(
-	  CURLOPT_URL => $webhook,
-	  CURLOPT_RETURNTRANSFER => true,
-	  CURLOPT_ENCODING => "",
-	  CURLOPT_MAXREDIRS => 10,
-	  CURLOPT_TIMEOUT => 30,
-	  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-	  CURLOPT_CUSTOMREQUEST => "POST",
-	  CURLOPT_POSTFIELDS => http_build_query($request,'','&'),
-	  CURLOPT_HTTPHEADER => array(
-	    "content-type: application/x-www-form-urlencoded",
-	  ),
-	));
+    curl_setopt_array($curl, array(
+        CURLOPT_URL => $webhook,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_ENCODING => "",
+        CURLOPT_MAXREDIRS => 10,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_CUSTOMREQUEST => "POST",
+        CURLOPT_POSTFIELDS => http_build_query($request, '', '&'),
+        CURLOPT_HTTPHEADER => array(
+            "content-type: application/x-www-form-urlencoded",
+        ),
+    ));
 
-	$response = curl_exec($curl);
-	$err = curl_error($curl);
+    $response = curl_exec($curl);
+    $err = curl_error($curl);
 
-	curl_close($curl);
+    curl_close($curl);
 
-	return $request;
+    return $request;
 }
 
 if (!class_exists('StringCutter')) {

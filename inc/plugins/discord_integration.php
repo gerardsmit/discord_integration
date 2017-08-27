@@ -346,18 +346,16 @@ function discord_integration_build_request($behavior, $nickname=NULL, $content=N
 		$userlink = $username;
 	
 	$threadlink = "[{$mybb->input['subject']}]($threadurl)";	
-	$forumlink = "[{$forum['name']}]($forumurl)";	
+	$forumlink = "[{$forum['name']}]($forumurl)";
 
-	if (strlen($mybb->input['message']) > $SHORT_POST_LENGTH)
-		$messageshort =  StringCutter::truncate($mybb->input['message'], $SHORT_POST_LENGTH, '...', array('word' => true, 'bbcode' => true));
-	else
-		$messageshort = $mybb->input['message'];
+    // Remove quote
+    $messageshort = preg_replace('/\[quote.*?\](.*?)\[\/quote\]/ism', '', $mybb->input['message']);
+
+    // Truncate
+    $messageshort = StringCutter::truncate($messageshort, $SHORT_POST_LENGTH, '...', array('word' => true, 'bbcode' => true));
 
 	// Escape everyone and here
     $messageshort = preg_replace('/@(everyone|here)/', '__@__$1', $messageshort);
-
-    // Remove quote
-    $messageshort = preg_replace('/\[quote.*?\](.*?)\[\/quote\]/ism', '', $messageshort);
 
     // Styling
     $messageshort = preg_replace('/\[b](.*?)\[\/b\]/ism', '**$1**', $messageshort);
